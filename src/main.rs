@@ -17,30 +17,47 @@
  */
 
 extern crate getopts;
-extern crate nix;
 extern crate log;
 extern crate env_logger;
 
 use std::env;
+use std::u64;
+use std::str::FromStr;
+use std::{time, thread};
 use std::process::exit;
+use std::process::Command;
 use getopts::Options;
 
+fn run(prog: Vec<String>, number: u64) {
+
+
+    for _ in 0..number {
+        println!("Running!");
+        Command::new(&prog[0])
+                .args(&prog[1..])
+                .spawn()
+                .expect("command failed");
+    }
+
+    println!("Sleeping for 1sec");
+    thread::sleep(time::Duration::from_secs(1));
+}
+
 fn print_usage(opts: Options) {
-    let brief = "usage:\teinhyrningsins [options] program"; // XXX:
+    let brief = "usage:\teinhyrningsins [options] program";
     println!("");
     print!("{}", opts.usage(&brief));
 }
 
 fn main() {
-    println!("Hello, world!");
 
     let args: Vec<String> = env::args().collect();
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("v", "verbose", "more debugging messages");
-    opts.optflag("n", "number", "how many program copies to spawn");
-    opts.optflag("b", "bind", "how many program copies to spawn");
+    opts.optopt("n", "number", "how many program copies to spawn", "COUNT");
+    opts.optmulti("b", "bind", "socket(s) to bind to", "ADDR");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
@@ -52,10 +69,24 @@ fn main() {
         return;
     }
 
+    let number: u64 = match matches.opt_str("number") {
+        Some(n) => u64::from_str(&n).unwrap(),
+        None => 1
+    };
+
+    let program_and_args = if !matches.free.is_empty() {
+        matches.free
+    } else {
+        print_usage(opts);
+        exit(-1);
+    };
+
     let mut builder = env_logger::LogBuilder::new();
     builder.parse("INFO");
     if env::var("RUST_LOG").is_ok() {
         builder.parse(&env::var("RUST_LOG").unwrap());
     }
     builder.init().unwrap();
+
+    run(program_and_args, number);
 }
