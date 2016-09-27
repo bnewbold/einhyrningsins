@@ -1,0 +1,13 @@
+einhyrningsins(1) -- graceful restarts for socket-based daemons
+===============================================================
+
+## SYNOPSIS
+
+lorem
+
+## DESCRIPTION
+
+ipsum
+
+## SEE ALSO
+`einhorn (1)`

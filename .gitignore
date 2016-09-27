@@ -1,0 +1,26 @@
+doc/*.html
+doc/*.1
+doc/*.roff
+target
+
+*.o
+*.a
+*.pyc
+#*#
+*~
+*.swp
+.*
+*.tmp
+*.old
+*.profile
+*.bkp
+*.bak
+[Tt]humbs.db
+*.DS_Store
+build/
+_build/
+src/build/
+*.log
+
+# Don't ignore this file itself
+!.gitignore
