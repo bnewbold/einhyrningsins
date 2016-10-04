@@ -33,6 +33,7 @@ use std::net::ToSocketAddrs;
 use getopts::Options;
 
 use std::os::unix::io::IntoRawFd;
+use nix::sys::signal;
 
 fn run(binds: Vec<TcpListener>, mut prog: Command, number: u64) {
 
@@ -57,6 +58,26 @@ fn run(binds: Vec<TcpListener>, mut prog: Command, number: u64) {
     println!("Waiting for all children to die");
     for mut c in children {
         c.wait().unwrap();
+    }
+    println!("Done.");
+}
+
+static mut interrupted: bool = false;
+
+extern fn handle_hup(_: i32) {
+    println!("This is where I would restart all children gracefully?");
+}
+
+extern fn handle_int(_: i32) {
+    let first = unsafe {
+        let tmp = !interrupted;
+        interrupted = true;
+        tmp
+    };
+    if first {
+        println!("Waiting for childred to shutdown gracefully (Ctrl-C again to bail)");
+    } else {
+        panic!();
     }
 }
 
@@ -111,6 +132,30 @@ fn main() {
         builder.parse(&env::var("RUST_LOG").unwrap());
     }
     builder.init().unwrap();
+
+    println!("Registering signal handlers...");
+    let mut mask_hup = signal::SigSet::empty();
+    mask_hup.add(signal::Signal::SIGHUP);
+    mask_hup.add(signal::Signal::SIGUSR2);
+    let hup_action = signal::SigAction::new(
+        signal::SigHandler::Handler(handle_hup),
+        signal::SaFlags::empty(),
+        mask_hup);
+
+    let mut mask_int = signal::SigSet::empty();
+    mask_int.add(signal::Signal::SIGINT);
+    mask_int.add(signal::Signal::SIGTERM);
+    let int_action = signal::SigAction::new(
+        signal::SigHandler::Handler(handle_int),
+        signal::SaFlags::empty(),
+        mask_int);
+
+    unsafe {
+        signal::sigaction(signal::Signal::SIGHUP,  &hup_action).unwrap();
+        signal::sigaction(signal::Signal::SIGUSR2, &hup_action).unwrap();
+        signal::sigaction(signal::Signal::SIGINT,  &int_action).unwrap();
+        signal::sigaction(signal::Signal::SIGTERM, &int_action).unwrap();
+    }
 
     let binds: Vec<TcpListener> = sock_addrs.iter().map(|sa| {
         TcpListener::bind(sa).unwrap()
