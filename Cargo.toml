@@ -9,6 +9,8 @@ log = "0.3"
 env_logger = "0.3"
 getopts = "^0.2"
 timer = "0.1"
+time = "0.1"
 chrono = "0.2"
 chan = "0.1"
 chan-signal = "0.1"
+uuid = { version = "0.2", features = ["v4"] }
