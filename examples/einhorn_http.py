@@ -12,6 +12,7 @@ import sys
 import socket
 import socketserver
 import http.server
+import logging as log
 
 class EinhornTCPServer(socketserver.TCPServer):
 
@@ -21,7 +22,7 @@ class EinhornTCPServer(socketserver.TCPServer):
         # Try to sniff first socket
         try:
             fd = int(os.environ['EINHORN_FD_0'])
-            print("Will try to listen with fd=%d" % fd)
+            log.debug("Will try to listen with fd=%d" % fd)
         except KeyError:
             raise EnvironmentError("Couldn't find EINHORN_FD_0 env variable... is this running under einhorn?")
 
@@ -36,17 +37,20 @@ class EinhornTCPServer(socketserver.TCPServer):
             raise
 
 if __name__ == "__main__":
+    log.basicConfig(
+        format="%(filename)s [%(process)d] %(levelname)s: %(message)s",
+        level=log.DEBUG)
     Handler = http.server.SimpleHTTPRequestHandler
     try:
         httpd = EinhornTCPServer(None, Handler)
     except EnvironmentError as ee:
-        print(ee)
-        print("Falling back on vanilla http server on 8080")
+        log.warn(str(ee))
+        log.info("Falling back on vanilla http server on 8080")
         httpd = socketserver.TCPServer(("localhost", 8080), Handler)
 
-    print("Serving!")
+    log.debug("Serving!")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
-        print("Caught KeyboardInterrupt, shutting down")
+        log.warn("Caught KeyboardInterrupt, shutting down")
         httpd.server_close()
