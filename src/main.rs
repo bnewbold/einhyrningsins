@@ -87,13 +87,41 @@ impl Offspring {
     }
 
     pub fn spawn(&mut self, cfg: &mut EinConfig) -> Result<(), String> {
-        if self.state != OffspringState::Expectant && self.state != OffspringState::Dead {
+        if self.is_active() {
             return Err(format!("Can't spawn from state: {:?}", self.state));
         }
         self.process = Some(cfg.cmd.spawn().expect("error spawning"));
         self.birthday = Instant::now();
         self.attempts = 0;
         Ok(())
+    }
+
+    pub fn is_active(&self) -> bool {
+        match self.state {
+            OffspringState::Expectant => false,
+            OffspringState::Infancy => true,
+            OffspringState::Healthy => true,
+            OffspringState::Notified => true,
+            OffspringState::Dead => false,
+        }
+    }
+
+    pub fn signal(&mut self, sig: Signal) {
+        if !self.is_active() {
+            return;
+        }
+        let nix_sig = match sig {
+            Signal::HUP => nix::sys::signal::Signal::SIGHUP,
+            Signal::INT => nix::sys::signal::Signal::SIGINT,
+            _ => { println!("Unexpected signal: {:?}", sig); return; },
+        };
+        match self.process {
+            Some(ref p) => { nix::sys::signal::kill(p.id() as i32, nix_sig).unwrap(); },
+            None => (),
+        }
+        // TODO: abs probably isn't the best way to i32 -> u32 here
+        //nix::sys::signal::kill(num::abs(self.process.unwrap().id()), nix_sig);
+        //let pid = self.process.unwrap().id();
     }
 }
 
@@ -107,7 +135,6 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
 
     //// create timer
     let timer = timer::Timer::new();
-    // XXX: these signatures are bogus
     let (timer_tx, timer_rx): (Sender<TimerAction>, Receiver<TimerAction>) = chan::async();
 
     //// birth the initial set of offspring
@@ -127,11 +154,15 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
     //// infinite select() loop over timers, signals, rpc
     loop {
         chan_select! {
-            timer_rx.recv() => println!("Timer tick'd"),
-            signal_rx.recv() -> sig => {
-                println!("");
-                println!("Signal received! {:?}", sig);
-                break;
+            timer_rx.recv() => { println!("Timer tick'd"); "TIMER" },
+            signal_rx.recv() -> sig => match sig.expect("Error with signal handler") {
+                // XXX: Signal::HUP => brood.iter().for_each(|o| o.signal(sig)),
+                Signal::INT | Signal::TERM=> {
+                    println!("Notifying children...");
+                    // XXX: brood.iter().for_each(|o| o.signal(sig));
+                    break;
+                },
+                _ => "Other"
             }
         }
     }
@@ -144,8 +175,8 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
             None => (),
         }
     }
-*/
     println!("Done.");
+*/
 }
 
 fn print_usage(opts: Options) {
@@ -209,6 +240,7 @@ fn main() {
     builder.init().unwrap();
 
     let binds: Vec<TcpListener> = sock_addrs.iter().map(|sa| {
+        // XXX: SO_REUSE here
         TcpListener::bind(sa).unwrap()
     }).collect();
 
