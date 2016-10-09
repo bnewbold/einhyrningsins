@@ -1,0 +1,10 @@
+
+"signalfd is useless"
+https://ldpreload.com/blog/signalfd-is-useless
+
+"Why Bash is like that: Signal propagation" (Ctrl-C sends SIGINT to entire
+process group, not just the parent process)
+http://www.vidarholen.net/contents/blog/?p=34
+
+"Should you be scared of Unix signals?"
+http://jvns.ca/blog/2016/06/13/should-you-be-scared-of-signals/

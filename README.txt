@@ -8,15 +8,7 @@
 
                                                 ... is einhorn in Rust!
 
-Further Reading
----------------
-
-"signalfd is useless"
-https://ldpreload.com/blog/signalfd-is-useless
-
-"Why Bash is like that: Signal propagation" (Ctrl-C sends SIGINT to entire
-process group, not just the parent process)
-http://www.vidarholen.net/contents/blog/?p=34
+See doc/refs.txt for further reading.
 
 License
 ---------
