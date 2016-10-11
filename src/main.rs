@@ -121,9 +121,6 @@ impl Offspring {
             Some(ref p) => { nix::sys::signal::kill(p.id() as i32, nix_sig).unwrap(); },
             None => (),
         }
-        // TODO: abs probably isn't the best way to i32 -> u32 here
-        //nix::sys::signal::kill(num::abs(self.process.unwrap().id()), nix_sig);
-        //let pid = self.process.unwrap().id();
     }
 }
 
@@ -156,29 +153,32 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
     //// infinite select() loop over timers, signals, rpc
     loop {
         chan_select! {
-            timer_rx.recv() => { println!("Timer tick'd"); "TIMER" },
+            timer_rx.recv() => { println!("Timer tick'd"); },
             signal_rx.recv() -> sig => match sig.expect("Error with signal handler") {
-                // XXX: Signal::HUP => brood.iter().for_each(|o| o.signal(sig)),
-                Signal::INT | Signal::TERM=> {
+                Signal::HUP => {
+                    for (_, o) in brood.iter_mut() {
+                        o.signal(sig.unwrap());
+                    } },
+                Signal::INT | Signal::TERM => {
                     println!("Notifying children...");
-                    // XXX: brood.iter().for_each(|o| o.signal(sig));
+                    for (_, o) in brood.iter_mut() {
+                        o.signal(sig.unwrap());
+                    }
                     break;
                 },
-                _ => "Other"
+                _ => ()
             }
         }
     }
 
-/* XXX:
     println!("Waiting for all children to die");
-    for mut o in brood.values() {
+    for (_, o) in brood.iter_mut() {
         match o.process {
             Some(ref mut p) => { p.wait().unwrap(); () },
             None => (),
         }
     }
     println!("Done.");
-*/
 }
 
 fn print_usage(opts: Options) {
