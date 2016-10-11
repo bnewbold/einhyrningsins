@@ -53,6 +53,8 @@ struct EinConfig {
     count: u64,
     bind_fds: Vec<RawFd>,
     cmd: Command,
+    ipv4_only: bool,
+    ipv6_only: bool,
     //TODO:rpc_ask: Sender<String>,
     //TODO:rpc_reply: Receiver<Result<String, String>>,
 }
@@ -193,6 +195,8 @@ fn main() {
     opts.parsing_style(getopts::ParsingStyle::StopAtFirstFree);
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("v", "verbose", "more debugging messages");
+    opts.optflag("4", "ipv4-only", "only accept IPv4 connections");
+    opts.optflag("6", "ipv6-only", "only accept IPv6 connections");
     opts.optopt("n", "number", "how many program copies to spawn", "COUNT");
     opts.optmulti("b", "bind", "socket(s) to bind to", "ADDR");
 
@@ -206,23 +210,54 @@ fn main() {
         return;
     }
 
+    if matches.opt_present("4") && matches.opt_present("6") {
+        println!("Can't be both IPv4-only and IPv6-only");
+        exit(-1);
+    }
+
     //// Parse Configuration
     let mut cfg = EinConfig{
         count: 1,
         childhood: Duration::seconds(3),
         retries: 3,
         bind_fds: vec![],
+        ipv4_only: matches.opt_present("4"),
+        ipv6_only: matches.opt_present("6"),
         cmd: Command::new(""),
     };
 
-    cfg.count = match matches.opt_str("number") {
-        Some(n) => u64::from_str(&n).expect("number arg should be an integer"),
-        None => 1   // XXX: duplicate default
-    };
+    if let Some(n) = matches.opt_str("number") {
+        cfg.count = u64::from_str(&n).expect("number arg should be an integer");
+    }
 
     //// Bind Sockets
-    let sock_addrs: Vec<SocketAddr> = matches.opt_strs("bind").iter().map(|b| {
-        b.to_socket_addrs().unwrap().next().unwrap()
+    // These will be tuples: (SocketAddr, SO_REUSEADDR, O_NONBLOCK)
+    let sock_confs: Vec<(SocketAddr, bool, bool)> = matches.opt_strs("bind").iter().map(|b| {
+        let mut r = false;
+        let mut n = false;
+        let mut addr_chunks = b.split(',');
+        let sock_str = addr_chunks.next().unwrap();
+        let mut sock_addrs = sock_str.to_socket_addrs().unwrap();
+        // ugly
+        let sock = if cfg.ipv4_only {
+            let mut sock_addrs = sock_addrs.filter(
+                |sa| if let SocketAddr::V4(_) = *sa { true } else { false });
+            sock_addrs.next().expect("Couldn't bind as IPv4")
+        } else if cfg.ipv6_only {
+            let mut sock_addrs = sock_addrs.filter(
+                |sa| if let SocketAddr::V6(_) = *sa { true } else { false });
+            sock_addrs.next().expect("Couldn't bind as IPv6")
+        } else {
+            sock_addrs.next().expect("Couldn't bind socket")
+        };
+        for subarg in addr_chunks { match subarg {
+            "r" => r = true,
+            "n" => n = true,
+            "" => (),
+            _ => { println!("Unknown socket arg '{}', I only know about 'n' and 'r'. Try --help", subarg);
+                   exit(-1); },
+        }}
+        (sock, r, n)
     }).collect();
 
     let program_and_args = if !matches.free.is_empty() {
@@ -239,9 +274,9 @@ fn main() {
     }
     builder.init().unwrap();
 
-    let binds: Vec<TcpListener> = sock_addrs.iter().map(|sa| {
-        // XXX: SO_REUSE here
-        TcpListener::bind(sa).unwrap()
+    let binds: Vec<(TcpListener, bool, bool)> = sock_confs.iter().map(|t| {
+        let sa = t.0; let r = t.1; let n = t.2; // ugly
+        (TcpListener::bind(sa).unwrap(), r, n)
     }).collect();
 
     let mut cmd = Command::new(&program_and_args[0]);
@@ -249,10 +284,17 @@ fn main() {
 
     // TODO: check that program exists and is executable
 
-    cfg.bind_fds = binds.into_iter().map(|b| {
+    cfg.bind_fds = binds.into_iter().map(|t| {
+        let b = t.0; let r = t.1; let n = t.2;  // ugly
         let orig_fd = b.into_raw_fd();
         // Duplicate, which also clears the CLOEXEC flag
         let fd = nix::unistd::dup(orig_fd).unwrap();
+        if r {
+            nix::sys::socket::setsockopt(fd, nix::sys::socket::sockopt::ReuseAddr, &true).unwrap();
+        }
+        if n {
+            nix::fcntl::fcntl(fd, nix::fcntl::FcntlArg::F_SETFL(nix::fcntl::O_NONBLOCK)).unwrap();
+        }
         println!("fd={} FD_CLOEXEC={}", fd, nix::fcntl::fcntl(fd, nix::fcntl::FcntlArg::F_GETFD).unwrap());
         fd
     }).collect();
