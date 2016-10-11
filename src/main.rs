@@ -55,8 +55,6 @@ struct EinConfig {
     cmd: Command,
     ipv4_only: bool,
     ipv6_only: bool,
-    //TODO:rpc_ask: Sender<String>,
-    //TODO:rpc_reply: Receiver<Result<String, String>>,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -150,7 +148,7 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
         brood.insert(o.id, o);
     }
 
-    //// infinite select() loop over timers, signals, rpc
+    //// infinite select() loop over timers, signals
     loop {
         chan_select! {
             timer_rx.recv() => { println!("Timer tick'd"); },
@@ -281,8 +279,6 @@ fn main() {
 
     let mut cmd = Command::new(&program_and_args[0]);
     cmd.args(&program_and_args[1..]);
-
-    // TODO: check that program exists and is executable
 
     cfg.bind_fds = binds.into_iter().map(|t| {
         let b = t.0; let r = t.1; let n = t.2;  // ugly
