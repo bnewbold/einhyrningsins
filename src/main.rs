@@ -172,6 +172,7 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
     }
 
     //// infinite select() loop over timers, signals
+    let mut run = true;
     loop {
         chan_select! {
             timer_rx.recv() -> action => match action.expect("Error with timer thread") {
@@ -221,12 +222,13 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                 },
             },
             signal_rx.recv() -> sig => match sig.expect("Error with signal handler") {
-                Signal::USR1 => {   // USING AS PLACEHOLDER FOR SIGCHLD
+                Signal::CHLD => {
                     loop {
-                        let res = nix::sys::wait::waitpid(-1, Some(nix::sys::wait::WNOWAIT));
+                        let res = nix::sys::wait::waitpid(-1, Some(nix::sys::wait::WNOHANG));
                         match res {
-                            Ok(nix::sys::wait::WaitStatus::Exited(pid, status)) => {
-                                println!("PID {} exited with status {}", pid, status);
+                            Ok(nix::sys::wait::WaitStatus::Exited(pid, _)) |
+                            Ok(nix::sys::wait::WaitStatus::Signaled(pid, _, _)) => {
+                                println!("PID {} exited", pid);
                                 if let Some(mut o) = brood.remove(&(pid as u32)) { match o.state {
                                     OffspringState::Infancy => {
                                         if o.attempts + 1 >= cfg.retries {
@@ -248,8 +250,14 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                                     }
                                 } };
                             },
+                            Ok(nix::sys::wait::WaitStatus::StillAlive) => break,
                             Ok(_) => {
                                 println!("Some other thing we don't care about happened: {:?}", res);
+                            },
+                            Err(nix::Error::Sys(nix::Errno::ECHILD)) => {
+                                println!("all children are dead, bailing");
+                                run = false;
+                                break;
                             },
                             Err(e) => {
                                 println!("waitpid err: {}", e);
@@ -267,16 +275,17 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                     for (_, o) in brood.iter_mut() {
                         o.terminate(&mut cfg, &mut timer, timer_tx.clone());
                     }
-                    break;
+                    run = false;
                 },
                 _ => ()
             },
         }
+        if !run { break; }
     }
 
-    println!("Waiting for all children to die");
+    println!("Reaping children... (count={})", brood.len());
     for (_, o) in brood.iter_mut() {
-        o.process.wait().unwrap();
+        o.process.wait().ok();
     }
     println!("Done.");
 }
@@ -411,7 +420,7 @@ fn main() {
     println!("Registering signal handlers...");
     let signal_rx = chan_signal::notify(&[Signal::INT,
                                           Signal::TERM,
-                                          //Signal::CHLD, // XXX: PR has been submitted
+                                          Signal::CHLD, // XXX: PR has been submitted
                                           Signal::USR2,
                                           Signal::HUP]);
 
