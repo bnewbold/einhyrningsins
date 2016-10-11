@@ -155,11 +155,6 @@ enum TimerAction {
     CheckShutdown(u32),
 }
 
-/*
-    Result<WaitStatus>
-    nix::sys::wait::waitpid
-*/
-
 // This is the main event loop
 fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
 
@@ -209,7 +204,7 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                         }
                         brood.insert(pid, o);
                     };
-                }
+                },
                 TimerAction::CheckShutdown(pid) => {
                     if let Some(o) = brood.get_mut(&pid) {
                         if o.is_active() {
@@ -227,6 +222,41 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
             },
             signal_rx.recv() -> sig => match sig.expect("Error with signal handler") {
                 Signal::USR1 => {   // USING AS PLACEHOLDER FOR SIGCHLD
+                    loop {
+                        let res = nix::sys::wait::waitpid(-1, Some(nix::sys::wait::WNOWAIT));
+                        match res {
+                            Ok(nix::sys::wait::WaitStatus::Exited(pid, status)) => {
+                                println!("PID {} exited with status {}", pid, status);
+                                if let Some(mut o) = brood.remove(&(pid as u32)) { match o.state {
+                                    OffspringState::Infancy => {
+                                        if o.attempts + 1 >= cfg.retries {
+                                            println!("Ran out of retries...");
+                                        } else {
+                                            let mut successor = o.respawn(&mut cfg, &mut timer, timer_tx.clone()).unwrap();
+                                            successor.attempts = o.attempts + 1;
+                                            brood.insert(successor.process.id(), successor);
+                                        }
+                                    },
+                                    OffspringState::Healthy => {
+                                        let mut successor = o.respawn(&mut cfg, &mut timer, timer_tx.clone()).unwrap();
+                                        successor.replaces = Some(pid as u32);
+                                        brood.insert(successor.process.id(), successor);
+                                    },
+                                    OffspringState::Notified => (),
+                                    OffspringState::Dead => {
+                                        println!("ERR: double-notified death on {}", pid);
+                                    }
+                                } };
+                            },
+                            Ok(_) => {
+                                println!("Some other thing we don't care about happened: {:?}", res);
+                            },
+                            Err(e) => {
+                                println!("waitpid err: {}", e);
+                                break;
+                            },
+                        }
+                    };
                 },
                 Signal::HUP => {
                     for (_, o) in brood.iter_mut() {
