@@ -17,6 +17,7 @@ slog = "1.0"
 slog-envlogger = "0.5"
 json = "*"
 url = "1.2"
+rustyline = "1.0"
 
 [replace]
 "chan-signal:0.1.6" = { git = 'https://github.com/bnewbold/chan-signal' }

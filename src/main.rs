@@ -18,6 +18,7 @@
 
 #[macro_use]
 extern crate chan;
+extern crate json;
 
 extern crate getopts;
 extern crate log;
@@ -47,7 +48,6 @@ use time::Duration;
 use std::collections::HashMap;
 use getopts::Options;
 
-use url::percent_encoding;
 use chan_signal::Signal;
 use chan::{Sender, Receiver};
 use std::os::unix::io::{RawFd, IntoRawFd};
@@ -167,6 +167,7 @@ enum TimerAction {
 enum CtrlAction {
     Increment,
     Decrement,
+    ManualAck(u32),
     SigAll(Signal),
     ShutdownAll,
     UpgradeAll,
@@ -277,6 +278,14 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                     },
                     CtrlAction::Status => {
                         req.tx.send(format!("UNIMPLEMENTED"));
+                    },
+                    CtrlAction::ManualAck(pid) => {
+                        if let Some(o) = brood.get_mut(&pid) {
+                            if o.is_active() {
+                                o.state = OffspringState::Healthy;
+                            }
+                        }
+                        req.tx.send(format!("Acknowledged!"));
                     },
                 }
             },
@@ -508,14 +517,74 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
     let reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);
     for rawline in reader.lines() {
+
         let rawline = rawline.unwrap();
-        let line = percent_encoding::percent_decode(rawline.as_bytes()).decode_utf8().unwrap();
-        println!("Decoded message: {}", line);
+        println!("Got line: {}", rawline);
+        if rawline.len() == 0 {
+            continue;
+        }
+
+        // Parse message
+        let req_action = if let Ok(msg) = json::parse(&rawline) {
+            match msg["command"].as_str() {
+                Some("worker:ack") => {
+                    CtrlAction::ManualAck(msg["pid"].as_u32().unwrap())
+                },
+                Some("signal") => {
+                    CtrlAction::SigAll(match msg["args"][0].as_str() {
+                        Some("SIGHUP") | Some("HUP") => Signal::HUP,
+                        Some("SIGINT") | Some("INT") => Signal::INT,
+                        Some("SIGTERM") | Some("TERM") => Signal::TERM,
+                        Some("SIGKILL") | Some("KILL") => Signal::KILL,
+                        Some("SIGUSR1") | Some("USR1") => Signal::KILL,
+                        Some("SIGUSR2") | Some("USR2") => Signal::USR2,
+                        Some("SIGSTOP") | Some("STOP") => Signal::STOP,
+                        Some("SIGCONT") | Some("CONT") => Signal::CONT,
+                        Some(_) | None => {
+                            writer.write_all("\"Missing or unhandled 'signal'\"\n".as_bytes()).unwrap();
+                            writer.flush().unwrap();
+                            continue;
+                        },
+                    })
+                },
+                Some("inc") => CtrlAction::Increment,
+                Some("dec") => CtrlAction::Decrement,
+                Some("status") => CtrlAction::Status,
+                Some("die") => CtrlAction::ShutdownAll,
+                Some("upgrade") => CtrlAction::UpgradeAll,
+                Some("ehlo") => {
+                    writer.write_all("\"Hi there!\"\n\r".as_bytes()).unwrap();
+                    writer.flush().unwrap();
+                    continue;
+                },
+                Some("help") => {
+                    writer.write_all("\"Command Listing: <TODO>\"\n".as_bytes()).unwrap(); // TODO
+                    writer.flush().unwrap();
+                    continue;
+                },
+                Some(_) | None => {
+                    writer.write_all("\"Missing or unhandled 'command'\"\n".as_bytes()).unwrap();
+                    writer.flush().unwrap();
+                    continue;
+                },
+            }
+        } else {
+            writer.write_all("\"Expected valid JSON!\"\n".as_bytes()).unwrap();
+            writer.flush().unwrap();
+            continue;
+        };
+
+        // Send request
         let (tx, rx): (Sender<String>, Receiver<String>)  = chan::async();
-        let req = CtrlRequest{ action: CtrlAction::Status, tx: tx };
+        let req = CtrlRequest{ action: req_action, tx: tx };
         ctrl_req_tx.send(req);
+
+        // Send reply
         let resp = rx.recv().unwrap();
+        writer.write_all("\"".as_bytes()).unwrap();
         writer.write_all(resp.as_bytes()).unwrap();
+        writer.write_all("\"\n".as_bytes()).unwrap();
+        writer.flush().unwrap();
     }
     stream.shutdown(std::net::Shutdown::Both).unwrap();
 }
