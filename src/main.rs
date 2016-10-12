@@ -258,16 +258,35 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
             ctrl_req_rx.recv() -> maybe_req =>
                 if let Some(req) = maybe_req { match req.action {
                     CtrlAction::Increment => {
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        let o = Offspring::spawn(&mut cfg, &mut timer, timer_tx.clone()).unwrap();
+                        let pid = o.process.id();
+                        brood.insert(pid, o);
+                        req.tx.send(format!("Spawned! Went from {} to {}", cfg.count, cfg.count+1));
+                        cfg.count = cfg.count+1;
                     },
                     CtrlAction::Decrement => {
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        if cfg.count <= 0 {
+                            req.tx.send(format!("Already at count=0, no-op"));
+                            continue;
+                        }
+                        let mut done = false;
+                        for (_, o) in brood.iter_mut() {
+                            if o.is_active() {
+                                o.shutdown(&mut cfg, &mut timer, timer_tx.clone());
+                                req.tx.send(format!("Notified! Went from {} to {}", cfg.count, cfg.count-1));
+                                cfg.count = cfg.count-1;
+                                done = true;
+                            }
+                        }
+                        if !done {
+                            req.tx.send(format!("No live workers to shutdown! :("));
+                        }
                     },
                     CtrlAction::SigAll(sig) => {
                         for (_, o) in brood.iter_mut() {
                             o.signal(sig);
                         }
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        req.tx.send(format!("Signalled all children!"));
                     },
                     CtrlAction::ShutdownAll => {
                         let mut pid_list = vec![];
@@ -277,10 +296,22 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                                 pid_list.push(pid);
                             }
                         }
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        req.tx.send(format!("Sent shutdown to all children!"));
                     },
                     CtrlAction::UpgradeAll => {
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        let keys: Vec<u32> = brood.keys().map(|x| *x).collect();
+                        for pid in keys {
+                            let mut successor = {
+                                let o = brood.get_mut(&pid).unwrap();
+                                if !o.is_active() {
+                                    continue;
+                                }
+                                o.respawn(&mut cfg, &mut timer, timer_tx.clone()).unwrap()
+                            };
+                            successor.attempts = 0;
+                            brood.insert(successor.process.id(), successor);
+                        }
+                        req.tx.send(format!("Upgrading all children!"));
                     },
                     CtrlAction::Status => {
                         req.tx.send(format!("UNIMPLEMENTED"));
@@ -341,16 +372,32 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                     };
                 },
                 Signal::HUP => {
-                    for (_, o) in brood.iter_mut() {
-                        o.signal(sig.unwrap());
+                    let keys: Vec<u32> = brood.keys().map(|x| *x).collect();
+                    for pid in keys {
+                        let mut successor = {
+                            let o = brood.get_mut(&pid).unwrap();
+                            if !o.is_active() {
+                                continue;
+                            }
+                            o.respawn(&mut cfg, &mut timer, timer_tx.clone()).unwrap()
+                        };
+                        successor.attempts = 0;
+                        brood.insert(successor.process.id(), successor);
                     } },
                 Signal::TTIN | Signal::TTOU | Signal::USR1 | Signal::STOP | Signal::CONT => {
                     println!("Passing signal to children: {:?}", sig.unwrap());
                     for (_, o) in brood.iter_mut() {
                         o.signal(sig.unwrap());
                     } },
-                Signal::INT | Signal::TERM => {
-                    println!("Notifying children...");
+                Signal::INT | Signal::USR2 => {
+                    println!("Exiting! Gracefully shutting down children first, but won't wait.");
+                    for (_, o) in brood.iter_mut() {
+                        o.shutdown(&mut cfg, &mut timer, timer_tx.clone());
+                    }
+                    run = false;
+                },
+                Signal::TERM | Signal::QUIT => {
+                    println!("Exiting! Killing children first, but won't wait.");
                     for (_, o) in brood.iter_mut() {
                         o.terminate(&mut cfg, &mut timer, timer_tx.clone());
                     }
