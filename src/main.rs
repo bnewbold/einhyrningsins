@@ -147,9 +147,15 @@ impl Offspring {
         let nix_sig = match sig {
             Signal::HUP   => nix::sys::signal::Signal::SIGHUP,
             Signal::INT   => nix::sys::signal::Signal::SIGINT,
+            Signal::QUIT  => nix::sys::signal::Signal::SIGQUIT,
             Signal::TERM  => nix::sys::signal::Signal::SIGTERM,
             Signal::KILL  => nix::sys::signal::Signal::SIGKILL,
+            Signal::TTIN  => nix::sys::signal::Signal::SIGTTIN,
+            Signal::TTOU  => nix::sys::signal::Signal::SIGTTOU,
+            Signal::USR1  => nix::sys::signal::Signal::SIGUSR1,
             Signal::USR2  => nix::sys::signal::Signal::SIGUSR2,
+            Signal::STOP  => nix::sys::signal::Signal::SIGSTOP,
+            Signal::CONT  => nix::sys::signal::Signal::SIGCONT,
             _ => { println!("Unexpected signal: {:?}", sig); return; },
         };
         nix::sys::signal::kill(self.process.id() as i32, nix_sig).unwrap();
@@ -338,6 +344,11 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                     for (_, o) in brood.iter_mut() {
                         o.signal(sig.unwrap());
                     } },
+                Signal::TTIN | Signal::TTOU | Signal::USR1 | Signal::STOP | Signal::CONT => {
+                    println!("Passing signal to children: {:?}", sig.unwrap());
+                    for (_, o) in brood.iter_mut() {
+                        o.signal(sig.unwrap());
+                    } },
                 Signal::INT | Signal::TERM => {
                     println!("Notifying children...");
                     for (_, o) in brood.iter_mut() {
@@ -345,7 +356,9 @@ fn shepard(mut cfg: EinConfig, signal_rx: Receiver<Signal>) {
                     }
                     run = false;
                 },
-                _ => ()
+                default => {
+                    println!("Unexpected signal: {:?} (ignoring)", default);
+                },
             },
         }
         if !run { break; }
@@ -505,12 +518,19 @@ fn main() {
 
     //// Listen for signals (before any fork())
     println!("Registering signal handlers...");
-    // TODO: Should mask others here? START, etc?
-    let signal_rx = chan_signal::notify(&[Signal::INT,
+    let signal_rx = chan_signal::notify(&[Signal::HUP,
+                                          Signal::INT,
+                                          Signal::QUIT,
                                           Signal::TERM,
+                                          Signal::PIPE,
+                                          Signal::ALRM,
                                           Signal::CHLD, // NB: PR has been submitted
+                                          Signal::TTIN,
+                                          Signal::TTOU,
+                                          Signal::USR1,
                                           Signal::USR2,
-                                          Signal::HUP]);
+                                          Signal::STOP,
+                                          Signal::CONT]);
 
     //// Start Constrol Socket Thread
     thread::spawn(move || ctrl_socket_serve(ctrl_listener, ctrl_req_tx));
@@ -551,14 +571,16 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
                 },
                 Some("signal") => {
                     CtrlAction::SigAll(match msg["args"][0].as_str() {
-                        Some("SIGHUP") | Some("HUP") => Signal::HUP,
-                        Some("SIGINT") | Some("INT") => Signal::INT,
-                        Some("SIGTERM") | Some("TERM") => Signal::TERM,
-                        Some("SIGKILL") | Some("KILL") => Signal::KILL,
-                        Some("SIGUSR1") | Some("USR1") => Signal::KILL,
-                        Some("SIGUSR2") | Some("USR2") => Signal::USR2,
-                        Some("SIGSTOP") | Some("STOP") => Signal::STOP,
-                        Some("SIGCONT") | Some("CONT") => Signal::CONT,
+                        Some("SIGHUP")  | Some("HUP")  | Some("hup")  => Signal::HUP,
+                        Some("SIGINT")  | Some("INT")  | Some("int")  => Signal::INT,
+                        Some("SIGTERM") | Some("TERM") | Some("term") => Signal::TERM,
+                        Some("SIGTTIN") | Some("TTIN") | Some("ttin") => Signal::TTIN,
+                        Some("SIGTTOU") | Some("TTOU") | Some("ttou") => Signal::TTOU,
+                        Some("SIGKILL") | Some("KILL") | Some("kill") => Signal::KILL,
+                        Some("SIGUSR1") | Some("USR1") | Some("usr1") => Signal::USR1,
+                        Some("SIGUSR2") | Some("USR2") | Some("usr2") => Signal::USR2,
+                        Some("SIGSTOP") | Some("STOP") | Some("stop") => Signal::STOP,
+                        Some("SIGCONT") | Some("CONT") | Some("cont") => Signal::CONT,
                         Some(_) | None => {
                             writer.write_all("\"Missing or unhandled 'signal'\"\n".as_bytes()).unwrap();
                             writer.flush().unwrap();
