@@ -62,6 +62,8 @@
     <a href="#NAME">NAME</a>
     <a href="#SYNOPSIS">SYNOPSIS</a>
     <a href="#DESCRIPTION">DESCRIPTION</a>
+    <a href="#STATUS">STATUS</a>
+    <a href="#COPYRIGHT">COPYRIGHT</a>
     <a href="#SEE-ALSO">SEE ALSO</a>
   </div>
 
@@ -78,20 +80,56 @@
 
 <h2 id="SYNOPSIS">SYNOPSIS</h2>
 
-<p>lorem</p>
+<p><code>einhyrningsins</code> [OPTIONS] -- PROGRAM [PROGRAM_ARGS]</p>
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
-<p>ipsum</p>
+<p>This is a socket multiplexer featuring graceful restarts. It runs multiple
+copies of the child program that are passed a shared socket (or more than one)
+to bind to and accept connections from. Graceful rolling restarts enable
+updates of the child program with zero downtime and no dropped connections.</p>
+
+<p>This program requires special support in the child program to achive the
+graceful restarts and bind to inherited file descriptors indicated by
+environment variables.</p>
+
+<p><a class="man-ref" href="einhyrningsins.1.html">einhyrningsins<span class="s">(1)</span></a> is a partially-comparible re-implementation of <span class="man-ref">einhorn<span class="s">(1)</span></span> (a
+Ruby program) in Rust.  Einhorn itself derived from Unicorn.</p>
+
+<pre><code>-4, --ipv4-only     only accept IPv4 connections
+-6, --ipv6-only     only accept IPv6 connections
+-m, --manual        manual (explicit) acknowledge mode
+-n, --number COUNT  how many program copies to spawn
+-b, --bind ADDR     socket(s) to bind to
+</code></pre>
+
+<ul>
+<li><code>-h</code>, <code>--help</code>
+Print a help menu
+      --version       print the version
+  -v, --verbose       more debugging messages</li>
+</ul>
+
+
+<h2 id="STATUS">STATUS</h2>
+
+<p>This is a fun fun hobby project. Still in progress, and notably untested.</p>
+
+<h2 id="COPYRIGHT">COPYRIGHT</h2>
+
+<p>Copyright 2016  Bryan Newbold
+License GPLv3+: GNU GPL version 3 or later <a href="http://gnu.org/licenses/gpl.html" data-bare-link="true">http://gnu.org/licenses/gpl.html</a>.
+This is free software: you are free to change and redistribute it. There is NO
+WARRANTY, to the extent permitted by law.</p>
 
 <h2 id="SEE-ALSO">SEE ALSO</h2>
 
-<p><code>einhorn (1)</code></p>
+<p><code>einhorn (1)</code>, <code>einhyrningsinsctl(1)</code></p>
 
 
   <ol class='man-decor man-foot man foot'>
     <li class='tl'></li>
-    <li class='tc'>September 2016</li>
+    <li class='tc'>October 2016</li>
     <li class='tr'>einhyrningsins(1)</li>
   </ol>
 
