@@ -3,11 +3,43 @@ einhyrningsins(1) -- graceful restarts for socket-based daemons
 
 ## SYNOPSIS
 
-lorem
+`einhyrningsins` [OPTIONS] -- PROGRAM [PROGRAM_ARGS]
 
 ## DESCRIPTION
 
-ipsum
+This is a socket multiplexer featuring graceful restarts. It runs multiple
+copies of the child program that are passed a shared socket (or more than one)
+to bind to and accept connections from. Graceful rolling restarts enable
+updates of the child program with zero downtime and no dropped connections.
+
+This program requires special support in the child program to achive the
+graceful restarts and bind to inherited file descriptors indicated by
+environment variables.
+
+einhyrningsins(1) is a partially-comparible re-implementation of einhorn(1) (a
+Ruby program) in Rust.  Einhorn itself derived from Unicorn.
+
+
+    -4, --ipv4-only     only accept IPv4 connections
+    -6, --ipv6-only     only accept IPv6 connections
+    -m, --manual        manual (explicit) acknowledge mode
+    -n, --number COUNT  how many program copies to spawn
+    -b, --bind ADDR     socket(s) to bind to
+
+* `-h`, `--help`
+  Print a help menu
+        --version       print the version
+    -v, --verbose       more debugging messages
+
+## STATUS
+
+This is a fun fun hobby project. Still in progress, and notably untested.
+
+## COPYRIGHT
+Copyright 2016  Bryan Newbold
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
+This is free software: you are free to change and redistribute it. There is NO
+WARRANTY, to the extent permitted by law.
 
 ## SEE ALSO
-`einhorn (1)`
+`einhorn (1)`, `einhyrningsinsctl(1)`
