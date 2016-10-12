@@ -8,3 +8,6 @@ http://www.vidarholen.net/contents/blog/?p=34
 
 "Should you be scared of Unix signals?"
 http://jvns.ca/blog/2016/06/13/should-you-be-scared-of-signals/
+
+"Reap zombie processes using a SIGCHLD handler"
+http://www.microhowto.info/howto/reap_zombie_processes_using_a_sigchld_handler.html

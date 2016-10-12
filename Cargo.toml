@@ -13,9 +13,9 @@ time = "0.1"
 chrono = "0.2"
 chan = "0.1"
 chan-signal = "0.1"
-#slog = "1.0"
-#slog-envlogger = "0.5"
-#jsonrpc-core = "3.0"
+slog = "1.0"
+slog-envlogger = "0.5"
+json = "*"
 
 [replace]
 "chan-signal:0.1.6" = { git = 'https://github.com/bnewbold/chan-signal' }
