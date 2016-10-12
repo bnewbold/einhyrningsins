@@ -19,17 +19,20 @@ environment variables.
 einhyrningsins(1) is a partially-comparible re-implementation of einhorn(1) (a
 Ruby program) in Rust.  Einhorn itself derived from Unicorn.
 
-
-    -4, --ipv4-only     only accept IPv4 connections
-    -6, --ipv6-only     only accept IPv6 connections
-    -m, --manual        manual (explicit) acknowledge mode
-    -n, --number COUNT  how many program copies to spawn
-    -b, --bind ADDR     socket(s) to bind to
-
-* `-h`, `--help`
-  Print a help menu
-        --version       print the version
-    -v, --verbose       more debugging messages
+ * `-n`, `--number`=COUNT
+   How many child processes to spawn.
+ * `-b`, `--bind` ADDR
+   Socket(s) to bind to. This argument can be repeated.
+ * `-4`, `--ipv4-only`:
+   Only accept IPv4 connections
+ * `-6`, `--ipv6-only`
+   Only accept IPv6 connections
+ * `-h`, `--help`
+   Print a help menu
+ * `--version`
+   Print program version
+ * `-v`, `--verbose`
+   More verbose logging and output
 
 ## STATUS
 
