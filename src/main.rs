@@ -26,12 +26,15 @@ extern crate nix;
 extern crate timer;
 extern crate time;
 extern crate chan_signal;
+extern crate url;
 
 use std::io::prelude::*;
 use std::io::{BufReader, BufWriter};
 use std::env;
+use std::fs;
 use std::u64;
 use std::str::FromStr;
+use std::path::Path;
 use std::process::exit;
 use std::process::Command;
 use std::process::Child;
@@ -44,6 +47,7 @@ use time::Duration;
 use std::collections::HashMap;
 use getopts::Options;
 
+use url::percent_encoding;
 use chan_signal::Signal;
 use chan::{Sender, Receiver};
 use std::os::unix::io::{RawFd, IntoRawFd};
@@ -402,7 +406,13 @@ fn main() {
     //// Bind Sockets
 
     // Control socket first
-    let ctrl_listener = UnixListener::bind("/tmp/einhorn.sock").unwrap();
+    let ctrl_path = Path::new("/tmp/einhorn.sock");
+    // XXX: handle this more gracefully (per-process)
+    if ctrl_path.exists() {
+        fs::remove_file(&ctrl_path).unwrap();
+    }
+    println!("Binding control socket to: {:?}", ctrl_path);
+    let ctrl_listener = UnixListener::bind(ctrl_path).unwrap();
     // XXX: set mode/permissions/owner?
 
     // These will be tuples: (SocketAddr, SO_REUSEADDR, O_NONBLOCK)
@@ -497,9 +507,10 @@ fn main() {
 fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
     let reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);
-    for line in reader.lines() {
-        let line = line.unwrap();
-        println!("Got message: {}", line);
+    for rawline in reader.lines() {
+        let rawline = rawline.unwrap();
+        let line = percent_encoding::percent_decode(rawline.as_bytes()).decode_utf8().unwrap();
+        println!("Decoded message: {}", line);
         let (tx, rx): (Sender<String>, Receiver<String>)  = chan::async();
         let req = CtrlRequest{ action: CtrlAction::Status, tx: tx };
         ctrl_req_tx.send(req);
