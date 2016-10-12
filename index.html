@@ -96,18 +96,21 @@ environment variables.</p>
 <p><a class="man-ref" href="einhyrningsins.1.html">einhyrningsins<span class="s">(1)</span></a> is a partially-comparible re-implementation of <span class="man-ref">einhorn<span class="s">(1)</span></span> (a
 Ruby program) in Rust.  Einhorn itself derived from Unicorn.</p>
 
-<pre><code>-4, --ipv4-only     only accept IPv4 connections
--6, --ipv6-only     only accept IPv6 connections
--m, --manual        manual (explicit) acknowledge mode
--n, --number COUNT  how many program copies to spawn
--b, --bind ADDR     socket(s) to bind to
-</code></pre>
-
 <ul>
+<li><code>-n</code>, <code>--number</code>=COUNT
+How many child processes to spawn.</li>
+<li><code>-b</code>, <code>--bind</code> ADDR
+Socket(s) to bind to. This argument can be repeated.</li>
+<li><code>-4</code>, <code>--ipv4-only</code>:
+Only accept IPv4 connections</li>
+<li><code>-6</code>, <code>--ipv6-only</code>
+Only accept IPv6 connections</li>
 <li><code>-h</code>, <code>--help</code>
-Print a help menu
-      --version       print the version
-  -v, --verbose       more debugging messages</li>
+Print a help menu</li>
+<li><code>--version</code>
+Print program version</li>
+<li><code>-v</code>, <code>--verbose</code>
+More verbose logging and output</li>
 </ul>
 
 
