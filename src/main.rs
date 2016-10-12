@@ -371,6 +371,7 @@ fn main() {
     let mut opts = Options::new();
     opts.parsing_style(getopts::ParsingStyle::StopAtFirstFree);
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag("", "version", "print the version");
     opts.optflag("v", "verbose", "more debugging messages");
     opts.optflag("4", "ipv4-only", "only accept IPv4 connections");
     opts.optflag("6", "ipv6-only", "only accept IPv6 connections");
@@ -383,8 +384,13 @@ fn main() {
         Err(f) => { println!("{}", f.to_string()); print_usage(opts); exit(-1); }
     };          
 
-    if matches.opt_present("h") {
+    if matches.opt_present("help") {
         print_usage(opts);
+        return;
+    }
+
+    if matches.opt_present("version") {
+        println!("einhyrningsins {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
@@ -559,6 +565,12 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
                 },
                 Some("help") => {
                     writer.write_all("\"Command Listing: <TODO>\"\n".as_bytes()).unwrap(); // TODO
+                    writer.flush().unwrap();
+                    continue;
+                },
+                Some("version") => {
+                    let ver = format!("\"einhyrningsinsctl {}\"\n", env!("CARGO_PKG_VERSION"));
+                    writer.write_all(ver.as_bytes()).unwrap();
                     writer.flush().unwrap();
                     continue;
                 },

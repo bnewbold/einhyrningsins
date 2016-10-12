@@ -108,14 +108,20 @@ fn main() {
 
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
+    opts.optflag("", "version", "print the version");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => { m }
         Err(f) => { println!("{}", f.to_string()); print_usage(opts); exit(-1); }
     };          
 
-    if matches.opt_present("h") {
+    if matches.opt_present("help") {
         print_usage(opts);
+        return;
+    }
+
+    if matches.opt_present("version") {
+        println!("einhyrningsinsctl {}", env!("CARGO_PKG_VERSION"));
         return;
     }
 
