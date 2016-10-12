@@ -474,15 +474,26 @@ fn main() {
         ctrl_req_rx: ctrl_req_rx,
     };
 
+    let path_str = matches.opt_str("socket-path").unwrap_or("/tmp/einhorn.sock".to_string());
+
     if let Some(n) = matches.opt_str("number") {
         cfg.count = u64::from_str(&n).expect("number arg should be an integer");
     }
 
+    let bind_slugs = matches.opt_strs("bind");
+
+    let program_and_args = if !matches.free.is_empty() {
+        matches.free
+    } else {
+        println!("Missing program to run (try --help)");
+        exit(-1);
+    };
+
     //// Bind Sockets
 
     // Control socket first
-    let ctrl_path = Path::new("/tmp/einhorn.sock");
     // XXX: handle this more gracefully (per-process)
+    let ctrl_path = Path::new(&path_str);
     if ctrl_path.exists() {
         fs::remove_file(&ctrl_path).unwrap();
     }
@@ -491,7 +502,7 @@ fn main() {
     // XXX: set mode/permissions/owner?
 
     // These will be tuples: (SocketAddr, SO_REUSEADDR, O_NONBLOCK)
-    let sock_confs: Vec<(SocketAddr, bool, bool)> = matches.opt_strs("bind").iter().map(|b| {
+    let sock_confs: Vec<(SocketAddr, bool, bool)> = bind_slugs.iter().map(|b| {
         let mut r = false;
         let mut n = false;
         let mut addr_chunks = b.split(',');
@@ -518,13 +529,6 @@ fn main() {
         }}
         (sock, r, n)
     }).collect();
-
-    let program_and_args = if !matches.free.is_empty() {
-        matches.free
-    } else {
-        print_usage(opts);
-        exit(-1);
-    };
 
     let mut builder = env_logger::LogBuilder::new();
     builder.parse("INFO");
