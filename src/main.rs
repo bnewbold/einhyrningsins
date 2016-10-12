@@ -519,6 +519,19 @@ fn main() {
     exit(0);
 }
 
+const CTRL_SHELL_USAGE: &'static str = r#"\"Command Listing:
+
+    inc             increments number of children
+    dec             decrements number of children
+    upgrade         replaces all children with new spawns, gracefully
+    die             kills all children gracefully, then exits
+    shutdown        kills all children gracefully, then exits
+    signal SIG      sends signal SIG to all children
+    status          shows summary state of children
+    help            prints this help message
+    version         prints (master) version
+\"\n"#;
+
 fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
     let reader = BufReader::new(&stream);
     let mut writer = BufWriter::new(&stream);
@@ -564,7 +577,7 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
                     continue;
                 },
                 Some("help") => {
-                    writer.write_all("\"Command Listing: <TODO>\"\n".as_bytes()).unwrap(); // TODO
+                    writer.write_all(CTRL_SHELL_USAGE.as_bytes()).unwrap(); // TODO
                     writer.flush().unwrap();
                     continue;
                 },
