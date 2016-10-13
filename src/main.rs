@@ -424,8 +424,10 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
     }
 
     println!("Reaping children... (count={})", brood.len());
-    for (_, o) in brood.iter_mut() {
-        o.process.wait().ok();
+    for (pid, o) in brood.iter() {
+        if o.is_active() {
+            nix::sys::wait::waitpid(*pid as i32, Some(nix::sys::wait::WNOHANG)).ok();
+        }
     }
     println!("Done.");
 }
