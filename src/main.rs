@@ -66,6 +66,7 @@ struct EinConfig {
     manual_ack: bool,
     ctrl_path: String,
     bind_slugs: Vec<String>,
+    env_drops: Vec<String>,
 }
 
 struct EinState {
@@ -453,7 +454,8 @@ fn main() {
     opts.optflag("6", "ipv6-only", "only accept IPv6 connections");
     opts.optflag("m", "manual", "manual (explicit) acknowledge mode");
     opts.optopt("n", "number", "how many program copies to spawn", "COUNT");
-    opts.optmulti("b", "bind", "socket(s) to bind to", "ADDR");
+    opts.optmulti("b", "bind", "socket(s) to bind to (can be repeated)", "ADDR");
+    opts.optmulti("", "drop-env-var", "ENV variables to mask (can be repeated)", "ADDR");
     opts.optopt("d", "socket-path", "where to look for control socket (default: /tmp/einhorn.sock)", "PATH");
     opts.optopt("r", "retries", "how many times to attempt spawning", "RETRIES");
 
@@ -491,6 +493,7 @@ fn main() {
     };
 
     let bind_slugs = matches.opt_strs("bind");
+    let env_drops = matches.opt_strs("drop-env-var");
     let ipv4_only = matches.opt_present("4");
     let ipv6_only = matches.opt_present("6");
     let manual_ack =  matches.opt_present("m");
@@ -514,6 +517,7 @@ fn main() {
         manual_ack: manual_ack,
         ctrl_path: path_str,
         bind_slugs: bind_slugs,
+        env_drops: env_drops,
     };
 
     // Control socket first; not same scope as other state
@@ -606,6 +610,9 @@ fn init(cfg: EinConfig, ctrl_req_rx: Receiver<CtrlRequest>) -> Result<EinState, 
 
     let mut cmd = Command::new(cfg.program.clone());
     cmd.args(&cfg.program_args);
+    for var in &cfg.env_drops {
+        cmd.env_remove(var);
+    }
 
     let bind_fds: Vec<RawFd> = binds.into_iter().map(|t| {
         let b = t.0; let r = t.1; let n = t.2;  // ugly
