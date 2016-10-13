@@ -642,7 +642,7 @@ fn init(cfg: EinConfig, ctrl_req_rx: Receiver<CtrlRequest>) -> Result<EinState, 
 
 /* * * * * * * *   Control Socket Server   * * * * * * * */
 
-const CTRL_SHELL_USAGE: &'static str = r#"\"Command Listing:
+const CTRL_SHELL_USAGE: &'static str = r#"Command Listing:
 
     inc             increments number of children
     dec             decrements number of children
@@ -653,7 +653,7 @@ const CTRL_SHELL_USAGE: &'static str = r#"\"Command Listing:
     status          shows summary state of children
     help            prints this help message
     version         prints (master) version
-\"\n"#;
+"#;
 
 fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
     let reader = BufReader::new(&stream);
@@ -702,7 +702,12 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>) {
                     continue;
                 },
                 Some("help") => {
-                    writer.write_all(CTRL_SHELL_USAGE.as_bytes()).unwrap(); // TODO
+                                    //let escaped = json::JsonValue::String(CTRL_SHELL_USAGE.to_string());
+                                    //writer.write_all(json::stringify(escaped).as_bytes()).unwrap();
+
+                    let escaped = json::stringify(json::JsonValue::from(CTRL_SHELL_USAGE));
+                    writer.write_all(escaped.as_bytes()).unwrap();
+                    writer.write_all("\n".as_bytes()).unwrap();
                     writer.flush().unwrap();
                     continue;
                 },

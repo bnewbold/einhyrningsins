@@ -53,7 +53,7 @@ fn shell(ctrl_stream: UnixStream) {
 
     println!("");
     println!("Welcome to the einhyrningsins shell!");
-    println!("Try 'help if you need it");
+    println!("Try 'help' if you need it");
 
     loop {
         let readline = rl.readline("> ");
