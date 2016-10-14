@@ -1,20 +1,19 @@
-/*
- *  einhyrningsinsctl: controller/shell for einhyrningsins
- *  Copyright (C) 2016  Bryan Newbold <bnewbold@robocracy.org>
- *
- *  This program is free software: you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License as published by
- *  the Free Software Foundation, either version 3 of the License, or
- *  (at your option) any later version.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+//  einhyrningsinsctl: controller/shell for einhyrningsins
+//  Copyright (C) 2016  Bryan Newbold <bnewbold@robocracy.org>
+//
+//  This program is free software: you can redistribute it and/or modify
+//  it under the terms of the GNU General Public License as published by
+//  the Free Software Foundation, either version 3 of the License, or
+//  (at your option) any later version.
+//
+//  This program is distributed in the hope that it will be useful,
+//  but WITHOUT ANY WARRANTY; without even the implied warranty of
+//  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+//  GNU General Public License for more details.
+//
+//  You should have received a copy of the GNU General Public License
+//  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+//
 
 #[macro_use]
 extern crate json;
@@ -57,34 +56,43 @@ fn shell(ctrl_stream: UnixStream) {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                if line.is_empty() { continue; };
+                if line.is_empty() {
+                    continue;
+                };
                 let mut chunks = line.split(' ');
                 let cmd = chunks.nth(0).unwrap();
                 let args = chunks.collect();
                 match send_msg(&mut reader, &mut writer, cmd, args) {
-                    Ok(s) => { println!("{}", s); },
+                    Ok(s) => {
+                        println!("{}", s);
+                    }
                     Err(e) => {
                         println!("Error sending control message: {}", e);
                         exit(-1);
-                    },
+                    }
                 }
-            },
-            Err(ReadlineError::Interrupted) | Err(ReadlineError::Eof) => {
+            }
+            Err(ReadlineError::Interrupted) |
+            Err(ReadlineError::Eof) => {
                 println!("Caught kill signal (shutting down)");
-                break
-            },
+                break;
+            }
             Err(err) => {
                 println!("Shell Error: {:?} (shutting down)", err);
-                break
+                break;
             }
         }
     }
-    //drop(ctrl_stream);
+    // drop(ctrl_stream);
 }
 
 // This function sends a single request message down the writer, then waits for a reply on the
 // reader and prints the result.
-fn send_msg(reader: &mut BufRead, writer: &mut Write, cmd: &str, args: Vec<&str>) -> io::Result<String> {
+fn send_msg(reader: &mut BufRead,
+            writer: &mut Write,
+            cmd: &str,
+            args: Vec<&str>)
+            -> io::Result<String> {
 
     let mut buffer = String::new();
     let mut arg_list = json::JsonValue::new_array();
@@ -96,15 +104,15 @@ fn send_msg(reader: &mut BufRead, writer: &mut Write, cmd: &str, args: Vec<&str>
         "command" => cmd,
         "args" => arg_list
     };
-    //println!("Sending: {}", req.dump());
+    // println!("Sending: {}", req.dump());
     try!(writer.write_all(format!("{}\n", req.dump()).as_bytes()));
     try!(writer.flush());
 
     try!(reader.read_line(&mut buffer));
-    //println!("Got: {}", buffer);
+    // println!("Got: {}", buffer);
     let reply = match json::parse(&buffer) {
         Ok(obj) => obj,
-        Err(_) => { return Ok(buffer) },
+        Err(_) => return Ok(buffer),
     };
     Ok(match reply.as_str() {
         Some(s) => s.to_string(),
@@ -125,13 +133,23 @@ fn main() {
     let mut opts = Options::new();
     opts.optflag("h", "help", "print this help menu");
     opts.optflag("", "version", "print the version");
-    opts.optopt("e", "execute", "submit this command instead (no shell)", "CMD");
-    opts.optopt("d", "socket-path", "where to look for control socket (default: /tmp/einhorn.sock)", "PATH");
+    opts.optopt("e",
+                "execute",
+                "submit this command instead (no shell)",
+                "CMD");
+    opts.optopt("d",
+                "socket-path",
+                "where to look for control socket (default: /tmp/einhorn.sock)",
+                "PATH");
 
     let matches = match opts.parse(&args[1..]) {
-        Ok(m) => { m }
-        Err(f) => { println!("{}", f.to_string()); print_usage(opts); exit(-1); }
-    };          
+        Ok(m) => m,
+        Err(f) => {
+            println!("{}", f.to_string());
+            print_usage(opts);
+            exit(-1);
+        }
+    };
 
     if matches.opt_present("help") {
         print_usage(opts);
@@ -143,7 +161,7 @@ fn main() {
         return;
     }
 
-    // Bind to Control Socket 
+    // Bind to Control Socket
     let path_str = matches.opt_str("socket-path").unwrap_or("/tmp/einhorn.sock".to_string());
     let ctrl_path = Path::new(&path_str);
     if !ctrl_path.exists() {
@@ -151,30 +169,32 @@ fn main() {
         println!("Is the master process running? Do you need to tell me the correct socket path?");
         exit(-1);
     }
-    //println!("Connecting to control socket: {:?}", ctrl_path);
+    // println!("Connecting to control socket: {:?}", ctrl_path);
     let ctrl_stream = match UnixStream::connect(ctrl_path) {
         Ok(s) => s,
         Err(e) => {
             println!("Couldn't open socket [{}]: {}", path_str, e);
             exit(-1);
-        },
+        }
     };
 
     // Send a test message before continuing
     send_msg(&mut BufReader::new(&ctrl_stream),
              &mut BufWriter::new(&ctrl_stream),
              "ehlo",
-             vec![]).unwrap();
+             vec![])
+        .unwrap();
 
     match matches.opt_str("execute") {
         Some(cmd) => {
             match send_msg(&mut BufReader::new(&ctrl_stream),
                            &mut BufWriter::new(&ctrl_stream),
-                           &cmd, vec![]) {
+                           &cmd,
+                           vec![]) {
                 Ok(reply) => println!("{}", reply),
                 Err(e) => println!("Communications error: {}", e),
             }
-        }, 
+        } 
         None => shell(ctrl_stream),
     }
     exit(0);
