@@ -5,18 +5,15 @@ authors = ["bnewbold <bnewbold@robocracy.org>"]
 
 [dependencies]
 nix = "0.7"
-log = "0.3"
-env_logger = "0.3"
 getopts = "^0.2"
 timer = "0.1"
 time = "0.1"
-chrono = "0.2"
 chan = "0.1"
 chan-signal = "0.1"
 slog = "1.0"
-slog-envlogger = "0.5"
+slog-term = "1.1"
+slog-syslog = "1.0.0-alpha"
 json = "*"
-url = "1.2"
 rustyline = "1.0"
 
 [replace]

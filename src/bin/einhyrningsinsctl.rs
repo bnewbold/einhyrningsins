@@ -20,13 +20,10 @@
 extern crate json;
 
 extern crate getopts;
-extern crate log;
-extern crate env_logger;
 extern crate nix;
 extern crate timer;
 extern crate time;
 extern crate chan_signal;
-extern crate url;
 extern crate rustyline;
 
 use std::io;
