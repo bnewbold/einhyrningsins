@@ -57,7 +57,7 @@ fn shell(ctrl_stream: UnixStream) {
         match readline {
             Ok(line) => {
                 rl.add_history_entry(&line);
-                if line.len() == 0 { continue; };
+                if line.is_empty() { continue; };
                 let mut chunks = line.split(' ');
                 let cmd = chunks.nth(0).unwrap();
                 let args = chunks.collect();

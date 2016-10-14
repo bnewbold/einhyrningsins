@@ -150,8 +150,8 @@ impl Offspring {
 
     pub fn is_active(&self) -> bool {
         match self.state {
-            OffspringState::Infancy => true,
-            OffspringState::Healthy => true,
+            OffspringState::Infancy |
+            OffspringState::Healthy |
             OffspringState::Notified => true,
             OffspringState::Dead => false,
         }
@@ -286,45 +286,45 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                         let pid = o.process.id();
                         brood.insert(pid, o);
                         req.tx.send(format!("Spawned! Went from {} to {}", state.cfg.count, state.cfg.count+1));
-                        state.cfg.count = state.cfg.count+1;
+                        state.cfg.count += 1;
                     },
                     CtrlAction::Decrement => {
                         if state.cfg.count <= 0 {
-                            req.tx.send(format!("Already at count=0, no-op"));
+                            req.tx.send("Already at count=0, no-op".to_string());
                             continue;
                         }
                         let mut done = false;
-                        for (_, o) in brood.iter_mut() {
+                        for (_, o) in &mut brood {
                             if o.is_active() {
                                 o.shutdown(&mut state);
                                 req.tx.send(format!("Notified! Went from {} to {}", state.cfg.count, state.cfg.count-1));
-                                state.cfg.count = state.cfg.count-1;
+                                state.cfg.count -= 1;
                                 done = true;
                                 break;
                             }
                         }
                         if !done {
-                            req.tx.send(format!("No live workers to shutdown! :("));
+                            req.tx.send("No live workers to shutdown! :(".to_string());
                         }
                     },
                     CtrlAction::SigAll(sig) => {
-                        for (_, o) in brood.iter_mut() {
+                        for (_, o) in &mut brood {
                             o.signal(sig);
                         }
-                        req.tx.send(format!("Signalled all children!"));
+                        req.tx.send("Signalled all children!".to_string());
                     },
                     CtrlAction::ShutdownAll => {
                         let mut pid_list = vec![];
-                        for (pid, o) in brood.iter_mut() {
+                        for (pid, o) in &mut brood {
                             if o.is_active() {
                                 o.shutdown(&mut state);
                                 pid_list.push(pid);
                             }
                         }
-                        req.tx.send(format!("Sent shutdown to all children!"));
+                        req.tx.send("Sent shutdown to all children!".to_string());
                     },
                     CtrlAction::UpgradeAll => {
-                        let keys: Vec<u32> = brood.keys().map(|x| *x).collect();
+                        let keys: Vec<u32> = brood.keys().cloned().collect();
                         for pid in keys {
                             let mut successor = {
                                 let o = brood.get_mut(&pid).unwrap();
@@ -336,10 +336,10 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                             successor.attempts = 0;
                             brood.insert(successor.process.id(), successor);
                         }
-                        req.tx.send(format!("Upgrading all children!"));
+                        req.tx.send("Upgrading all children!".to_string());
                     },
                     CtrlAction::Status => {
-                        req.tx.send(format!("UNIMPLEMENTED"));
+                        req.tx.send("UNIMPLEMENTED".to_string());
                     },
                     CtrlAction::ManualAck(pid) => {
                         if let Some(o) = brood.get_mut(&pid) {
@@ -347,7 +347,7 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                                 o.state = OffspringState::Healthy;
                             }
                         }
-                        req.tx.send(format!("Acknowledged!"));
+                        req.tx.send("Acknowledged!".to_string());
                     },
                 }
             },
@@ -401,7 +401,7 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                     };
                 },
                 Signal::HUP => {
-                    let keys: Vec<u32> = brood.keys().map(|x| *x).collect();
+                    let keys: Vec<u32> = brood.keys().cloned().collect();
                     for pid in keys {
                         let mut successor = {
                             let o = brood.get_mut(&pid).unwrap();
@@ -417,13 +417,13 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                     let sig = sig.unwrap();
                     info!(state.log, "passing signal to children";
                         "signal" => format!("{:?}", sig));
-                    for (_, o) in brood.iter_mut() {
+                    for (_, o) in &mut brood {
                         o.signal(sig);
                     } },
                 Signal::INT | Signal::USR2 => {
                     info!(state.log,
                         "Exiting! Gracefully shutting down children first, but won't wait");
-                    for (_, o) in brood.iter_mut() {
+                    for (_, o) in &mut brood {
                         o.shutdown(&mut state);
                     }
                     run = false;
@@ -431,7 +431,7 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
                 Signal::TERM | Signal::QUIT => {
                     info!(state.log,
                         "Exiting! Killing children first, but won't wait.");
-                    for (_, o) in brood.iter_mut() {
+                    for (_, o) in &mut brood {
                         o.terminate(&mut state);
                     }
                     run = false;
@@ -447,7 +447,7 @@ fn shepard(mut state: EinState, signal_rx: Receiver<Signal>) {
 
     info!(state.log, "reaping children";
         "count" => brood.len());
-    for (pid, o) in brood.iter() {
+    for (pid, o) in &brood {
         if o.is_active() {
             nix::sys::wait::waitpid(*pid as i32, Some(nix::sys::wait::WNOHANG)).ok();
         }
@@ -706,7 +706,7 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>, log:
 
         let rawline = rawline.unwrap();
         debug!(log, "got raw command"; "line" => rawline);
-        if rawline.len() == 0 {
+        if rawline.is_empty() {
             continue;
         }
 
@@ -729,7 +729,7 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>, log:
                         Some("SIGSTOP") | Some("STOP") | Some("stop") => Signal::STOP,
                         Some("SIGCONT") | Some("CONT") | Some("cont") => Signal::CONT,
                         Some(_) | None => {
-                            writer.write_all("\"Missing or unhandled 'signal'\"\n".as_bytes()).unwrap();
+                            writer.write_all(b"\"Missing or unhandled 'signal'\"\n").unwrap();
                             writer.flush().unwrap();
                             continue;
                         },
@@ -741,17 +741,14 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>, log:
                 Some("die") => CtrlAction::ShutdownAll,
                 Some("upgrade") => CtrlAction::UpgradeAll,
                 Some("ehlo") => {
-                    writer.write_all("\"Hi there!\"\n\r".as_bytes()).unwrap();
+                    writer.write_all(b"\"Hi there!\"\n\r").unwrap();
                     writer.flush().unwrap();
                     continue;
                 },
                 Some("help") => {
-                                    //let escaped = json::JsonValue::String(CTRL_SHELL_USAGE.to_string());
-                                    //writer.write_all(json::stringify(escaped).as_bytes()).unwrap();
-
                     let escaped = json::stringify(json::JsonValue::from(CTRL_SHELL_USAGE));
                     writer.write_all(escaped.as_bytes()).unwrap();
-                    writer.write_all("\n".as_bytes()).unwrap();
+                    writer.write_all(b"\n").unwrap();
                     writer.flush().unwrap();
                     continue;
                 },
@@ -762,13 +759,13 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>, log:
                     continue;
                 },
                 Some(_) | None => {
-                    writer.write_all("\"Missing or unhandled 'command'\"\n".as_bytes()).unwrap();
+                    writer.write_all(b"\"Missing or unhandled 'command'\"\n").unwrap();
                     writer.flush().unwrap();
                     continue;
                 },
             }
         } else {
-            writer.write_all("\"Expected valid JSON!\"\n".as_bytes()).unwrap();
+            writer.write_all(b"\"Expected valid JSON!\"\n").unwrap();
             writer.flush().unwrap();
             continue;
         };
@@ -780,9 +777,9 @@ fn ctrl_socket_handle(stream: UnixStream, ctrl_req_tx: Sender<CtrlRequest>, log:
 
         // Send reply
         let resp = rx.recv().unwrap();
-        writer.write_all("\"".as_bytes()).unwrap();
+        writer.write_all(b"\"").unwrap();
         writer.write_all(resp.as_bytes()).unwrap();
-        writer.write_all("\"\n".as_bytes()).unwrap();
+        writer.write_all(b"\"\n").unwrap();
         writer.flush().unwrap();
     }
     stream.shutdown(std::net::Shutdown::Both).unwrap();
