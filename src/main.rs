@@ -484,9 +484,9 @@ fn main() {
     opts.optflag("m", "manual", "manual (explicit) acknowledge mode");
     opts.optopt("n", "number", "how many program copies to spawn", "COUNT");
     opts.optmulti("b", "bind", "socket(s) to bind to (can be repeated)", "ADDR");
-    opts.optmulti("", "drop-env-var", "ENV variables to mask (can be repeated)", "ADDR");
-    opts.optopt("d", "socket-path", "where to look for control socket (default: /tmp/einhorn.sock)", "PATH");
-    opts.optopt("r", "retries", "how many times to attempt spawning", "RETRIES");
+    opts.optmulti("", "drop-env-var", "ENV variables to mask (can be repeated)", "VAR");
+    opts.optopt("d", "socket-path", "where to create the control socket (default: /tmp/einhorn.sock)", "PATH");
+    opts.optopt("r", "retries", "how many times to attempt spawning", "COUNT");
 
     let matches = match opts.parse(&args[1..]) {
         Ok(m) => m,
