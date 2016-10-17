@@ -7,7 +7,7 @@ einhyrningsins(1) -- graceful restarts for socket-based daemons
 
 ## DESCRIPTION
 
-`Einhyrningsins` is a socket multiplexer featuring graceful restarts. It runs
+`einhyrningsins` is a socket multiplexer featuring graceful restarts. It runs
 multiple copies of a child program, each of which are passed a shared socket
 (or multiple shared sockets) to bind(2) to and accept(2) connections from.
 Graceful, rolling restarts enable updates of the child program with zero
@@ -18,6 +18,8 @@ graceful restarts (aka, exiting only after all connection close) and to be able
 to bind to inherited file descriptors (as indicated by environment variables).
 Child programs must also be able to run in parallel: for example, each copy
 must not try to write to the same output file without some form of locking.
+
+## OPTIONS
 
  * `-n`, `--number` <COUNT>:
    How many child processes to spawn.
@@ -58,13 +60,13 @@ must not try to write to the same output file without some form of locking.
  * `-d`, `--socket-path` <PATH>:
    Where to create the control socket (default: `/tmp/einhorn.sock`).
 
- * `-r`, `--retries` <COUNT>
+ * `-r`, `--retries` <COUNT>:
    How many times to attempt re-spawning before giving up.
 
 
 ## CHILD API
 
-`Einhyrningsins` creates children by fork(1)-ing a new process and
+`einhyrningsins` creates children by fork(1)-ing a new process and
 execve(1)-ing to run the proces itself. For every socket specified by a `-b`
 flag, a socket is bound in the main `einhyrningsins` process and then
 explicitly flagged to be passed on to the child processes. This means the child
@@ -86,21 +88,24 @@ containing the child's PID number:
 
 ## HISTORY
 
-`Einhyrningsins` is a partially-comparible re-implementation of einhorn(1) (a
+`einhyrningsins` is a partially-comparible re-implementation of einhorn(1) (a
 Ruby program) in Rust. Einhorn itself derived from Unicorn.
 
-The word "Einhyrningsins" is Icelandic for unicorn.
+The word "einhyrningsins" is Icelandic for unicorn.
 
 ## STATUS
 
-`Einhyrningsins` is a for-fun hobby project. It is not feature complete, fully
+`einhyrningsins` is a for-fun hobby project. It is not feature complete, fully
 documented, or tested.
 
 ## COPYRIGHT
+
 Copyright 2016  Bryan Newbold
+
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
 This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.
 
 ## SEE ALSO
+
 einhorn(1), einhyrningsinsctl(1), socket(7)

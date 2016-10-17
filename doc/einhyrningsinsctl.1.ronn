@@ -7,11 +7,13 @@ einhyrningsinsctl(1) -- control of einhyrningsins
 
 ## DESCRIPTION
 
-`Einhyrningsinsctl` is a shell client for einhyrningsins(1), which connects to
+`einhyrningsinsctl` is a shell client for einhyrningsins(1), which connects to
 a control socket (UNIX domain socket) and either sends a single command (via
 `-e`) or acts as an interactive shell.
 
 For a list of valid commands, start in shell mode and run `help`.
+
+## OPTIONS
 
  * `-e`, `--execute` <CMD>:
    Instead of starting a shell, just execute the CMD.
@@ -27,10 +29,13 @@ For a list of valid commands, start in shell mode and run `help`.
    Prints version number
 
 ## COPYRIGHT
+#
 Copyright 2016  Bryan Newbold
+
 License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>.
 This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.
 
 ## SEE ALSO
+#
 einhorn(1), einhyrningsins(1)
