@@ -62,6 +62,7 @@
     <a href="#NAME">NAME</a>
     <a href="#SYNOPSIS">SYNOPSIS</a>
     <a href="#DESCRIPTION">DESCRIPTION</a>
+    <a href="#OPTIONS">OPTIONS</a>
     <a href="#CHILD-API">CHILD API</a>
     <a href="#HISTORY">HISTORY</a>
     <a href="#STATUS">STATUS</a>
@@ -86,7 +87,7 @@
 
 <h2 id="DESCRIPTION">DESCRIPTION</h2>
 
-<p><code>Einhyrningsins</code> is a socket multiplexer featuring graceful restarts. It runs
+<p><code>einhyrningsins</code> is a socket multiplexer featuring graceful restarts. It runs
 multiple copies of a child program, each of which are passed a shared socket
 (or multiple shared sockets) to <span class="man-ref">bind<span class="s">(2)</span></span> to and <span class="man-ref">accept<span class="s">(2)</span></span> connections from.
 Graceful, rolling restarts enable updates of the child program with zero
@@ -98,43 +99,33 @@ to bind to inherited file descriptors (as indicated by environment variables).
 Child programs must also be able to run in parallel: for example, each copy
 must not try to write to the same output file without some form of locking.</p>
 
-<ul>
-<li><p><code>-n</code>, <code>--number</code> <var>COUNT</var>:
-How many child processes to spawn.</p></li>
-<li><p><code>-b</code>, <code>--bind</code> <var>ADDR</var>:<var>PORT</var>[,<var>OPT</var>...]:
-Socket(s) to bind to. <var>OPT</var> specifies flags to be set on the socket. Options
+<h2 id="OPTIONS">OPTIONS</h2>
+
+<dl>
+<dt><code>-n</code>, <code>--number</code> <var>COUNT</var></dt><dd><p>How many child processes to spawn.</p></dd>
+<dt><code>-b</code>, <code>--bind</code> <var>ADDR</var>:<var>PORT</var>[,<var>OPT</var>...]</dt><dd><p>Socket(s) to bind to. <var>OPT</var> specifies flags to be set on the socket. Options
 are <code>n</code> for non-blocking (<code>O_NONBLOCK</code>) and <code>r</code> for re-using addresses
 (<code>SO_REUSEADDR</code>). Eg, for both options, could pass <code>-b 127.0.0.1:1234,r,n</code>.
-This argument can be repeated.</p></li>
-<li><p><code>-4</code>, <code>--ipv4-only</code>:
-Only accept IPv4 connections</p></li>
-<li><p><code>-6</code>, <code>--ipv6-only</code>:
-Only accept IPv6 connections</p></li>
-<li><p><code>-h</code>, <code>--help</code>:
-Print a help menu</p></li>
-<li><p><code>--version</code>:
-Print program version</p></li>
-<li><p><code>-v</code>, <code>--verbose</code>:
-More verbose logging and output</p></li>
-<li><p><code>--syslog</code>:
-Enables logging via <span class="man-ref">syslog<span class="s">(2)</span></span> (for WARN and above).</p></li>
-<li><p><code>-m</code>, <code>--manual</code>:
-Enable manual (explicit) acknowledge mode, in which each child program must
+This argument can be repeated.</p></dd>
+<dt><code>-4</code>, <code>--ipv4-only</code></dt><dd><p>Only accept IPv4 connections</p></dd>
+<dt><code>-6</code>, <code>--ipv6-only</code></dt><dd><p>Only accept IPv6 connections</p></dd>
+<dt><code>-h</code>, <code>--help</code></dt><dd><p>Print a help menu</p></dd>
+<dt><code>--version</code></dt><dd><p>Print program version</p></dd>
+<dt><code>-v</code>, <code>--verbose</code></dt><dd><p>More verbose logging and output</p></dd>
+<dt><code>--syslog</code></dt><dd><p>Enables logging via <span class="man-ref">syslog<span class="s">(2)</span></span> (for WARN and above).</p></dd>
+<dt><code>-m</code>, <code>--manual</code></dt><dd><p>Enable manual (explicit) acknowledge mode, in which each child program must
 connect to the master's control socket and "ACK" within a graceperiod, or it
-will be considered unhealthy and get restarted.</p></li>
-<li><p><code>--drop-env-var</code> <var>VAR</var>:
-Clears the given variable from the child's environment. All other variables
-are passed through by default. This argument can be repeated.</p></li>
-<li><p><code>-d</code>, <code>--socket-path</code> <var>PATH</var>:
-Where to create the control socket (default: <code>/tmp/einhorn.sock</code>).</p></li>
-<li><p><code>-r</code>, <code>--retries</code> <var>COUNT</var>
-How many times to attempt re-spawning before giving up.</p></li>
-</ul>
+will be considered unhealthy and get restarted.</p></dd>
+<dt><code>--drop-env-var</code> <var>VAR</var></dt><dd><p>Clears the given variable from the child's environment. All other variables
+are passed through by default. This argument can be repeated.</p></dd>
+<dt><code>-d</code>, <code>--socket-path</code> <var>PATH</var></dt><dd><p>Where to create the control socket (default: <code>/tmp/einhorn.sock</code>).</p></dd>
+<dt><code>-r</code>, <code>--retries</code> <var>COUNT</var></dt><dd><p>How many times to attempt re-spawning before giving up.</p></dd>
+</dl>
 
 
 <h2 id="CHILD-API">CHILD API</h2>
 
-<p><code>Einhyrningsins</code> creates children by <span class="man-ref">fork<span class="s">(1)</span></span>-ing a new process and
+<p><code>einhyrningsins</code> creates children by <span class="man-ref">fork<span class="s">(1)</span></span>-ing a new process and
 <span class="man-ref">execve<span class="s">(1)</span></span>-ing to run the proces itself. For every socket specified by a <code>-b</code>
 flag, a socket is bound in the main <code>einhyrningsins</code> process and then
 explicitly flagged to be passed on to the child processes. This means the child
@@ -157,26 +148,27 @@ containing the child's PID number:</p>
 
 <h2 id="HISTORY">HISTORY</h2>
 
-<p><code>Einhyrningsins</code> is a partially-comparible re-implementation of <a class="man-ref" href="https://github.com/stripe/einhorn">einhorn<span class="s">(1)</span></a> (a
+<p><code>einhyrningsins</code> is a partially-comparible re-implementation of <a class="man-ref" href="https://github.com/stripe/einhorn">einhorn<span class="s">(1)</span></a> (a
 Ruby program) in Rust. Einhorn itself derived from Unicorn.</p>
 
-<p>The word "Einhyrningsins" is Icelandic for unicorn.</p>
+<p>The word "einhyrningsins" is Icelandic for unicorn.</p>
 
 <h2 id="STATUS">STATUS</h2>
 
-<p><code>Einhyrningsins</code> is a for-fun hobby project. It is not feature complete, fully
+<p><code>einhyrningsins</code> is a for-fun hobby project. It is not feature complete, fully
 documented, or tested.</p>
 
 <h2 id="COPYRIGHT">COPYRIGHT</h2>
 
-<p>Copyright 2016  Bryan Newbold
-License GPLv3+: GNU GPL version 3 or later <a href="http://gnu.org/licenses/gpl.html" data-bare-link="true">http://gnu.org/licenses/gpl.html</a>.
+<p>Copyright 2016  Bryan Newbold</p>
+
+<p>License GPLv3+: GNU GPL version 3 or later <a href="http://gnu.org/licenses/gpl.html" data-bare-link="true">http://gnu.org/licenses/gpl.html</a>.
 This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.</p>
 
 <h2 id="SEE-ALSO">SEE ALSO</h2>
 
-<p><a class="man-ref" href="https://github.com/stripe/einhorn">einhorn<span class="s">(1)</span></a>, <a class="man-ref" href="einhyrningsinsctl.1.html">einhyrningsinsctl<span class="s">(1)</span></a>, <span class="man-ref">socket<span class="s">(7)</span></span></p>
+<p><a class="man-ref" href="https://github.com/stripe/einhorn">einhorn<span class="s">(1)</span></a>, <a class="man-ref" href="einhyrningsinsctl.1.html">einhyrningsinsctl<span class="s">(1)</span></a>, <a class="man-ref" href="http://man7.org/linux/man-pages/man7/socket.7.html">socket<span class="s">(7)</span></a></p>
 
 
   <ol class='man-decor man-foot man foot'>
