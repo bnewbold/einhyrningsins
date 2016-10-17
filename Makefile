@@ -11,8 +11,7 @@ gh-pages: docs
 	cp doc/*.1.html /tmp/einhyrningsins-ronn
 	git checkout gh-pages
 	cp /tmp/einhyrningsins-ronn/*.html .
-	cp einhyrningsins.1.html index.html
 	git add -u *.html
-	git commit -m "updating rendered manpage for github docs"
+	git commit -m "updating rendered manpage for github docs" || true
 	git checkout master
 	rm -r /tmp/einhyrningsins-ronn
