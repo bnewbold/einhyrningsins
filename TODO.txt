@@ -1,0 +1,19 @@
+- some form of unittests (shell scripts? sub-process?)
+    eg, https://github.com/uutils/coreutils/tree/master/tests
+- better error handling (no unwraps)
+- install command including manpages
+- TCP backlog argument
+- --kill-children-on-exit
+- --seconds N
+- argument to create a pid file
+
+nice to have:
+- refactor code into multiple files
+- design docs/notes
+- more examples: rust, golang, C, ruby, js/node
+- exponential backoffs
+- debian packaging
+- shell: timeouts on requests
+- explicit drop()s on timer guards in some places
+- more formal top-level state machine?
+- systemd, upstart, and sysV template init files
