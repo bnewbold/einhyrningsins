@@ -681,6 +681,7 @@ fn init(cfg: EinConfig, ctrl_req_rx: Receiver<CtrlRequest>) -> Result<EinState, 
     for (i, fd) in bind_fds.iter().enumerate() {
         cmd.env(format!("EINHORN_FD_{}", i), fd.to_string());
     }
+    cmd.env("EINHORN_SOCK_PATH", cfg.ctrl_path.clone());
 
     // create timer thread
     let timer = timer::Timer::new();
