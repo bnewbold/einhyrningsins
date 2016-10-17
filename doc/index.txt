@@ -1,0 +1,7 @@
+
+# These are cross-links for ronn (manpage+html documentation creator)
+einhyrningsins(1)       einhyrningsins.1
+einhyrningsinsctl(1)    einhyrningsinsctl.1
+
+# External links
+einhorn(1)              https://github.com/stripe/einhorn

@@ -3,40 +3,98 @@ einhyrningsins(1) -- graceful restarts for socket-based daemons
 
 ## SYNOPSIS
 
-`einhyrningsins` [OPTIONS] -- PROGRAM [PROGRAM_ARGS]
+`einhyrningsins` [<OPTIONS>] [--] <PROGRAM> [<PROGRAM_ARGS>]
 
 ## DESCRIPTION
 
-This is a socket multiplexer featuring graceful restarts. It runs multiple
-copies of the child program that are passed a shared socket (or more than one)
-to bind to and accept connections from. Graceful rolling restarts enable
-updates of the child program with zero downtime and no dropped connections.
+`Einhyrningsins` is a socket multiplexer featuring graceful restarts. It runs
+multiple copies of a child program, each of which are passed a shared socket
+(or multiple shared sockets) to bind(2) to and accept(2) connections from.
+Graceful, rolling restarts enable updates of the child program with zero
+downtime and no dropped connections.
 
 This program requires special support in the child program to achive the
-graceful restarts and bind to inherited file descriptors indicated by
-environment variables.
+graceful restarts (aka, exiting only after all connection close) and to be able
+to bind to inherited file descriptors (as indicated by environment variables).
+Child programs must also be able to run in parallel: for example, each copy
+must not try to write to the same output file without some form of locking.
 
-einhyrningsins(1) is a partially-comparible re-implementation of einhorn(1) (a
-Ruby program) in Rust.  Einhorn itself derived from Unicorn.
-
- * `-n`, `--number`=COUNT
+ * `-n`, `--number` <COUNT>:
    How many child processes to spawn.
- * `-b`, `--bind` ADDR
-   Socket(s) to bind to. This argument can be repeated.
+
+ * `-b`, `--bind` <ADDR>:<PORT>[,<OPT>...]:
+   Socket(s) to bind to. <OPT> specifies flags to be set on the socket. Options
+   are `n` for non-blocking (`O_NONBLOCK`) and `r` for re-using addresses
+   (`SO_REUSEADDR`). Eg, for both options, could pass `-b 127.0.0.1:1234,r,n`.
+   This argument can be repeated.
+
  * `-4`, `--ipv4-only`:
    Only accept IPv4 connections
- * `-6`, `--ipv6-only`
+
+ * `-6`, `--ipv6-only`:
    Only accept IPv6 connections
- * `-h`, `--help`
+
+ * `-h`, `--help`:
    Print a help menu
- * `--version`
+
+ * `--version`:
    Print program version
- * `-v`, `--verbose`
+
+ * `-v`, `--verbose`:
    More verbose logging and output
+
+ * `--syslog`:
+   Enables logging via syslog(2) (for WARN and above).
+
+ * `-m`, `--manual`:
+   Enable manual (explicit) acknowledge mode, in which each child program must
+   connect to the master's control socket and "ACK" within a graceperiod, or it
+   will be considered unhealthy and get restarted.
+
+ * `--drop-env-var` <VAR>:
+   Clears the given variable from the child's environment. All other variables
+   are passed through by default. This argument can be repeated.
+
+ * `-d`, `--socket-path` <PATH>:
+   Where to create the control socket (default: `/tmp/einhorn.sock`).
+
+ * `-r`, `--retries` <COUNT>
+   How many times to attempt re-spawning before giving up.
+
+
+## CHILD API
+
+`Einhyrningsins` creates children by fork(1)-ing a new process and
+execve(1)-ing to run the proces itself. For every socket specified by a `-b`
+flag, a socket is bound in the main `einhyrningsins` process and then
+explicitly flagged to be passed on to the child processes. This means the child
+process will already have a valid file descriptor bound to each of the shared
+sockets. The file descriptor numbers are passed via the following environment
+variables:
+
+ * `EINHORN_FD_COUNT`:
+   How many sockets have been passed.
+ * `EINHORN_FD_<NUM>`:
+   One evironment for each socket with <NUM> from 0 to `EINHORN_FD_COUNT-1`.
+
+When `einhyrningsins` is run in manual mode, each child process should connect
+to the control socket (at the UNIX path given by the `EINHORN_SOCK_PATH`
+variable) and write(2) a newline-terminated string like the following,
+containing the child's PID number:
+
+  `{"command":"worker:ack", "pid":<PID>}`
+
+## HISTORY
+
+`Einhyrningsins` is a partially-comparible re-implementation of einhorn(1) (a
+Ruby program) in Rust. Einhorn itself derived from Unicorn.
+
+The word "Einhyrningsins" is Icelandic for unicorn.
 
 ## STATUS
 
-This is a fun fun hobby project. Still in progress, and notably untested.
+`Einhyrningsins` is a for-fun hobby project. It is not feature complete, fully
+documented, or tested.
 
 ## COPYRIGHT
 Copyright 2016  Bryan Newbold
@@ -45,4 +103,4 @@ This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.
 
 ## SEE ALSO
-`einhorn (1)`, `einhyrningsinsctl(1)`
+einhorn(1), einhyrningsinsctl(1), socket(7)

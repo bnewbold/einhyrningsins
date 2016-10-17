@@ -3,21 +3,26 @@ einhyrningsinsctl(1) -- control of einhyrningsins
 
 ## SYNOPSIS
 
-`einhyrningsinsctl` [OPTIONS] [-e CMD]
+`einhyrningsinsctl` [<OPTIONS>] [-e <CMD>]
 
 ## DESCRIPTION
 
-Tiny shell client for einhyrningsins(1), which connects to a control socket
-(UNIX domain socket) and either sends a single command or acts as an
-interactive shell.
+`Einhyrningsinsctl` is a shell client for einhyrningsins(1), which connects to
+a control socket (UNIX domain socket) and either sends a single command (via
+`-e`) or acts as an interactive shell.
 
- * `-e`, `--execute`=CMD:
+For a list of valid commands, start in shell mode and run `help`.
+
+ * `-e`, `--execute` <CMD>:
    Instead of starting a shell, just execute the CMD.
- * `-d`, `--socket-path`=PATH:
+
+ * `-d`, `--socket-path` <PATH>:
    Where to look for the control socket (a UNIX domain socket).
    Defaults to `/tmp/einhorn.sock`.
+
  * `-h`, `--help`:
    Summary of options (of course)
+
  * `--version`:
    Prints version number
 
@@ -28,4 +33,4 @@ This is free software: you are free to change and redistribute it. There is NO
 WARRANTY, to the extent permitted by law.
 
 ## SEE ALSO
-`einhorn (1)`, `einhyrningsins(1)`
+einhorn(1), einhyrningsins(1)
