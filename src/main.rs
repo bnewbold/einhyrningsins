@@ -579,7 +579,7 @@ fn main() {
                                           Signal::TERM,
                                           Signal::PIPE,
                                           Signal::ALRM,
-                                          Signal::CHLD, // NB: PR has been submitted
+                                          Signal::CHLD,
                                           Signal::TTIN,
                                           Signal::TTOU,
                                           Signal::USR1,
