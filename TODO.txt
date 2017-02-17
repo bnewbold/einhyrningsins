@@ -1,3 +1,7 @@
+http://2ndscale.com/rtomayko/2009/unicorn-is-unix
+http://bogomips.org/unicorn/
+quick_error or error-chain
+
 - some form of unittests (shell scripts? sub-process?)
     eg, https://github.com/uutils/coreutils/tree/master/tests
 - better error handling (no unwraps)
@@ -8,6 +12,7 @@
 - argument to create a pid file
 
 nice to have:
+- consider renaming to einhyrn
 - refactor code into multiple files
 - design docs/notes
 - more examples: rust, golang, C, ruby, js/node
