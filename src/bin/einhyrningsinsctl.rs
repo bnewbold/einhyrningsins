@@ -194,7 +194,7 @@ fn main() {
                 Ok(reply) => println!("{}", reply),
                 Err(e) => println!("Communications error: {}", e),
             }
-        } 
+        }
         None => shell(ctrl_stream),
     }
     exit(0);
