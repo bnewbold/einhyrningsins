@@ -30,18 +30,23 @@ Building and Installation
 For now both building and installation are done with rust's cargo tool, usually
 bundled with the toolchain. If you haven't used rust before, "rustup" is highly
 recommended. einhyrningsins builds with the 'stable' compiler, and was
-developed against version 1.12 of the toolchain (September 2016). To build and
-install:
+developed against version 1.12 of the toolchain (September 2016). To build:
 
     cargo build --release
-    cargo install
 
 Manpages (in both roff and HTML format) are built using the `ronn` tool, which
 is available in many package managers. To build those pages, run:
 
     make docs
 
-There (currently) isn't an automated way to install the manpages.
+There are two ways to install. The first is user-local using the cargo tool:
+
+    cargo install
+
+The second is system-wide using make (this will also install the manpages):
+
+    make build docs
+    sudo make install
 
 Differences from Einhorn
 --------------------------
