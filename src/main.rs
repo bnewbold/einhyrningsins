@@ -738,7 +738,6 @@ const CTRL_SHELL_USAGE: &'static str = r#"Command Listing:
     dec             decrements number of children
     upgrade         replaces all children with new spawns, gracefully
     die             kills all children gracefully, then exits
-    shutdown        kills all children gracefully, then exits
     signal SIG      sends signal SIG to all children
     status          shows summary state of children
     help            prints this help message
